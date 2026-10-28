@@ -44,28 +44,11 @@ def tm(v):
     if isinstance(v,(int,float)): return (datetime.min+timedelta(days=float(v))).time().replace(second=0,microsecond=0)
     return datetime.strptime(s(v).replace('：',':'),'%H:%M').time()
 
-def export_materials(parent):
-    """Create a fresh directory so previously filled templates are never overwritten."""
-    parent = Path(parent)
-    base = '排班小程序使用资料'
-    for number in range(10000):
-        target = parent / (base if number == 0 else f'{base} ({number})')
-        try:
-            target.mkdir()
-            break
-        except FileExistsError:
-            continue
-    else:
-        raise OSError('无法创建新的资料文件夹')
-    try:
-        for name in ('模板', '第三方许可'):
-            shutil.copytree(ASSETS / name, target / name)
-        for name in ('使用说明.txt', '用户协议.txt', 'LICENSE'):
-            shutil.copy2(ASSETS / name, target / name)
-    except Exception:
-        shutil.rmtree(target, ignore_errors=True)
-        raise
-    return target
+TEMPLATES = {'名单': '排班名单模板.xlsx', '班次': '班次设置模板.xlsx', '冲突': '时间冲突模板.xlsx'}
+
+def export_template(kind, destination):
+    if kind not in TEMPLATES: raise ValueError('未知的模板类型')
+    shutil.copyfile(ASSETS / '模板' / TEMPLATES[kind], destination)
 
 def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, include_dorm=True, include_signature=True, include_class=True, include_major=True, include_counselor=True):
     people=[]
@@ -134,7 +117,7 @@ def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, inc
     return solver.StatusName(status)
 
 def main():
-    root=tk.Tk(); root.title('排班小程序'); root.geometry('800x545')
+    root=tk.Tk(); root.title('排班小程序'); root.geometry('800x590')
     frame=ttk.Frame(root,padding=22); frame.pack(fill='both',expand=True)
     ttk.Label(frame,text='排班小程序',font=('Microsoft YaHei',18,'bold')).grid(row=0,column=0,columnspan=3,sticky='w',pady=(0,12))
     ttk.Label(frame,text='按模板填写名单、班次和冲突；班次编号必须一致。',font=('Microsoft YaHei',10)).grid(row=1,column=0,columnspan=3,sticky='w',pady=(0,15))
@@ -160,25 +143,47 @@ def main():
             logging.exception('排班失败'); messagebox.showerror('无法生成排班',str(e))
     ttk.Button(frame,text='生成并导出排班表',command=run).grid(row=6,column=1,pady=16,sticky='w')
     ttk.Label(frame,text='支持 Excel（.xlsx）和 UTF-8 CSV；冲突可留空表。').grid(row=7,column=0,columnspan=3,sticky='w')
+    def show_text(title, content, parent=root):
+        win=tk.Toplevel(parent); win.title(title); win.geometry('700x550')
+        panel=ttk.Frame(win,padding=16); panel.pack(fill='both',expand=True)
+        text=ScrolledText(panel,wrap='word',font=('Microsoft YaHei',10))
+        text.pack(fill='both',expand=True); text.insert('1.0',content); text.configure(state='disabled')
     def about():
-        win=tk.Toplevel(root); win.title('关于与感谢'); win.geometry('600x330')
+        win=tk.Toplevel(root); win.title('关于与感谢'); win.geometry('600x370')
         panel=ttk.Frame(win,padding=20); panel.pack(fill='both',expand=True)
         ttk.Label(panel,text='排班小程序',font=('Microsoft YaHei',16,'bold')).pack(anchor='w')
-        ttk.Label(panel,text='项目发布与维护：wufong（GitHub @fhhv5）\n开发协助：OpenAI Codex\n\n感谢 Google OR-Tools、openpyxl、Python 和 PyInstaller 的开发者，\n以及 GitHub 排班项目作者提供的参考思路。\n请使用“导出模板和使用说明”获取开源许可。',justify='left').pack(anchor='w',pady=15)
+        ttk.Label(panel,text='项目发布与维护：wufong（GitHub @fhhv5）\n开发协助：OpenAI Codex\n\n感谢 Google OR-Tools、openpyxl、Python 和 PyInstaller 的开发者，\n以及 GitHub 排班项目作者提供的参考思路。',justify='left').pack(anchor='w',pady=15)
         ttk.Button(panel,text='打开 GitHub 项目仓库',command=lambda:webbrowser.open(REPO_URL)).pack(anchor='w')
         ttk.Label(panel,text=REPO_URL).pack(anchor='w',pady=8)
-    def export():
-        dest = filedialog.askdirectory(title='选择存放模板和说明的文件夹')
+        def licenses():
+            choice=tk.Toplevel(win); choice.title('开源许可'); choice.geometry('720x500')
+            box=tk.Listbox(choice); box.pack(fill='both',expand=True,padx=12,pady=12)
+            files=sorted((ASSETS/'第三方许可').rglob('*'))
+            files=[p for p in files if p.is_file()]
+            files.insert(0, ASSETS/'LICENSE')
+            for path in files: box.insert('end',str(path.relative_to(ASSETS)))
+            def open_license():
+                selection=box.curselection()
+                if selection:
+                    path=files[selection[0]]
+                    show_text(path.name,path.read_text(encoding='utf-8',errors='replace'),choice)
+            ttk.Button(choice,text='查看所选许可',command=open_license).pack(pady=(0,12))
+        ttk.Button(panel,text='查看开源许可',command=licenses).pack(anchor='w')
+    def export(kind):
+        dest = filedialog.asksaveasfilename(title='保存'+TEMPLATES[kind],initialfile=TEMPLATES[kind],defaultextension='.xlsx',filetypes=[('Excel 工作簿','*.xlsx')])
         if not dest: return
         try:
-            result=export_materials(dest)
-            messagebox.showinfo('导出完成',f'模板、使用说明和许可文件已保存到：\n{result}')
+            export_template(kind,dest)
+            messagebox.showinfo('导出完成',f'模板已保存到：\n{dest}')
         except Exception as e:
-            logging.exception('导出资料失败'); messagebox.showerror('导出失败',str(e))
+            logging.exception('导出模板失败'); messagebox.showerror('导出失败',str(e))
     buttons=ttk.Frame(frame); buttons.grid(row=8,column=0,columnspan=3,sticky='w',pady=10)
-    ttk.Button(buttons,text='导出模板和使用说明',command=export).pack(side='left',padx=(0,10))
-    ttk.Button(buttons,text='用户协议',command=lambda:messagebox.showinfo('用户协议',(ASSETS/'用户协议.txt').read_text(encoding='utf-8'))).pack(side='left',padx=(0,10))
-    ttk.Button(buttons,text='关于与感谢 / GitHub',command=about).pack(side='left')
+    for kind in TEMPLATES:
+        ttk.Button(buttons,text='导出'+kind+'模板',command=lambda k=kind:export(k)).pack(side='left',padx=(0,8))
+    more=ttk.Frame(frame); more.grid(row=9,column=0,columnspan=3,sticky='w',pady=4)
+    ttk.Button(more,text='使用说明',command=lambda:show_text('使用说明',(ASSETS/'使用说明.txt').read_text(encoding='utf-8'))).pack(side='left',padx=(0,8))
+    ttk.Button(more,text='用户协议',command=lambda:show_text('用户协议',(ASSETS/'用户协议.txt').read_text(encoding='utf-8'))).pack(side='left',padx=(0,8))
+    ttk.Button(more,text='关于与感谢 / GitHub',command=about).pack(side='left')
     def welcome():
         if (ROOT/'已阅读首次说明').exists(): return
         win=tk.Toplevel(root); win.title('欢迎使用排班小程序'); win.geometry('700x580'); win.transient(root); win.grab_set()
@@ -198,7 +203,7 @@ def main():
     root.after(100,welcome)
     root.mainloop()
 if __name__=='__main__':
-    if len(sys.argv)==3 and sys.argv[1]=='--export-materials':
-        export_materials(sys.argv[2])
+    if len(sys.argv)==4 and sys.argv[1]=='--export-template':
+        export_template(sys.argv[2],sys.argv[3])
     else:
         main()
