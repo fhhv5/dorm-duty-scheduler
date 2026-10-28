@@ -1,0 +1,6 @@
+构建临时/
+日志/
+输出/
+源代码/node_modules/
+源代码/__pycache__/
+*.inspect.ndjson
