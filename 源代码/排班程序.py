@@ -41,7 +41,7 @@ def tm(v):
     if isinstance(v,(int,float)): return (datetime.min+timedelta(days=float(v))).time().replace(second=0,microsecond=0)
     return datetime.strptime(s(v).replace('：',':'),'%H:%M').time()
 
-def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, include_dorm=True, include_signature=True):
+def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, include_dorm=True, include_signature=True, include_class=True, include_major=True, include_counselor=True):
     people=[]
     for i,r in read_table(peoplefile,['姓名']):
         name=s(r['姓名'])
@@ -97,7 +97,8 @@ def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, inc
     for sheet in wb:
         for col in range(sheet.max_column,0,-1):
             header=sheet.cell(1,col).value
-            if (header=='电话' and not include_phone) or (header=='宿舍' and not include_dorm) or (header=='签名' and not include_signature): sheet.delete_cols(col)
+            included = {'电话':include_phone, '宿舍':include_dorm, '签名':include_signature, '班级':include_class, '专业':include_major, '辅导员':include_counselor}
+            if header in included and not included[header]: sheet.delete_cols(col)
     for sheet in wb:
         sheet.freeze_panes='A2'; sheet.auto_filter.ref=sheet.dimensions
         for c in sheet[1]: c.font=Font(bold=True,color='FFFFFF'); c.fill=PatternFill('solid',fgColor='245B78'); c.alignment=Alignment(horizontal='center')
@@ -107,7 +108,7 @@ def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, inc
     return solver.StatusName(status)
 
 def main():
-    root=tk.Tk(); root.title('排班小程序'); root.geometry('760x490')
+    root=tk.Tk(); root.title('排班小程序'); root.geometry('800x490')
     frame=ttk.Frame(root,padding=22); frame.pack(fill='both',expand=True)
     ttk.Label(frame,text='排班小程序',font=('Microsoft YaHei',18,'bold')).grid(row=0,column=0,columnspan=3,sticky='w',pady=(0,12))
     ttk.Label(frame,text='按模板填写名单、班次和冲突；班次编号必须一致。',font=('Microsoft YaHei',10)).grid(row=1,column=0,columnspan=3,sticky='w',pady=(0,15))
@@ -119,10 +120,10 @@ def main():
             path=filedialog.askopenfilename(filetypes=[('表格','*.xlsx *.csv')]);
             if path: v.set(path)
         ttk.Button(frame,text='选择文件',command=choose).grid(row=i+2,column=2)
-    opts=[tk.BooleanVar(value=True) for _ in range(3)]
+    opts=[tk.BooleanVar(value=True) for _ in range(6)]
     options=ttk.Frame(frame); options.grid(row=5,column=0,columnspan=3,sticky='w',pady=8)
     ttk.Label(options,text='导出字段：').pack(side='left')
-    for label,v in zip(['电话','宿舍','签名栏'],opts): ttk.Checkbutton(options,text=label,variable=v).pack(side='left',padx=8)
+    for label,v in zip(['电话','宿舍','签名栏','班级','专业','辅导员'],opts): ttk.Checkbutton(options,text=label,variable=v).pack(side='left',padx=6)
     def run():
         out=filedialog.asksaveasfilename(initialdir=ROOT/'输出',initialfile='排班表_'+datetime.now().strftime('%Y%m%d_%H%M%S')+'.xlsx',defaultextension='.xlsx',filetypes=[('Excel 工作簿','*.xlsx')])
         if not out:return
