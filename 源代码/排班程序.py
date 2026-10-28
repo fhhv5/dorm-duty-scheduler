@@ -1,16 +1,19 @@
-import csv, sys, os, logging, traceback, webbrowser
+import csv, sys, os, logging, traceback, webbrowser, shutil
 from pathlib import Path
 from datetime import datetime, date, time, timedelta
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from tkinter.scrolledtext import ScrolledText
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from ortools.sat.python import cp_model
 
-ROOT = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent.parent
+PROJECT = Path(__file__).resolve().parent.parent
+ASSETS = Path(sys._MEIPASS) / '内置资料' if getattr(sys, 'frozen', False) else PROJECT
+ROOT = Path.home() / '排班小程序数据'
 REPO_URL = 'https://github.com/fhhv5/dorm-duty-scheduler'
-(ROOT/'日志').mkdir(exist_ok=True)
-(ROOT/'输出').mkdir(exist_ok=True)
+(ROOT/'日志').mkdir(parents=True, exist_ok=True)
+(ROOT/'输出').mkdir(parents=True, exist_ok=True)
 logging.basicConfig(filename=ROOT/'日志'/'运行日志.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', encoding='utf-8')
 
 def read_table(path, required):
@@ -40,6 +43,29 @@ def tm(v):
     if isinstance(v,time): return v.replace(second=0,microsecond=0)
     if isinstance(v,(int,float)): return (datetime.min+timedelta(days=float(v))).time().replace(second=0,microsecond=0)
     return datetime.strptime(s(v).replace('：',':'),'%H:%M').time()
+
+def export_materials(parent):
+    """Create a fresh directory so previously filled templates are never overwritten."""
+    parent = Path(parent)
+    base = '排班小程序使用资料'
+    for number in range(10000):
+        target = parent / (base if number == 0 else f'{base} ({number})')
+        try:
+            target.mkdir()
+            break
+        except FileExistsError:
+            continue
+    else:
+        raise OSError('无法创建新的资料文件夹')
+    try:
+        for name in ('模板', '第三方许可'):
+            shutil.copytree(ASSETS / name, target / name)
+        for name in ('使用说明.txt', '免责声明.txt', 'LICENSE'):
+            shutil.copy2(ASSETS / name, target / name)
+    except Exception:
+        shutil.rmtree(target, ignore_errors=True)
+        raise
+    return target
 
 def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, include_dorm=True, include_signature=True, include_class=True, include_major=True, include_counselor=True):
     people=[]
@@ -108,7 +134,7 @@ def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, inc
     return solver.StatusName(status)
 
 def main():
-    root=tk.Tk(); root.title('排班小程序'); root.geometry('800x490')
+    root=tk.Tk(); root.title('排班小程序'); root.geometry('800x545')
     frame=ttk.Frame(root,padding=22); frame.pack(fill='both',expand=True)
     ttk.Label(frame,text='排班小程序',font=('Microsoft YaHei',18,'bold')).grid(row=0,column=0,columnspan=3,sticky='w',pady=(0,12))
     ttk.Label(frame,text='按模板填写名单、班次和冲突；班次编号必须一致。',font=('Microsoft YaHei',10)).grid(row=1,column=0,columnspan=3,sticky='w',pady=(0,15))
@@ -138,9 +164,41 @@ def main():
         win=tk.Toplevel(root); win.title('关于与感谢'); win.geometry('600x330')
         panel=ttk.Frame(win,padding=20); panel.pack(fill='both',expand=True)
         ttk.Label(panel,text='排班小程序',font=('Microsoft YaHei',16,'bold')).pack(anchor='w')
-        ttk.Label(panel,text='项目发布与维护：wufong（GitHub @fhhv5）\n开发协助：OpenAI Codex\n\n感谢 Google OR-Tools、openpyxl、Python 和 PyInstaller 的开发者，\n以及 GitHub 排班项目作者提供的参考思路。\n开源许可与第三方声明请查看项目文件夹。',justify='left').pack(anchor='w',pady=15)
+        ttk.Label(panel,text='项目发布与维护：wufong（GitHub @fhhv5）\n开发协助：OpenAI Codex\n\n感谢 Google OR-Tools、openpyxl、Python 和 PyInstaller 的开发者，\n以及 GitHub 排班项目作者提供的参考思路。\n请使用“导出模板和使用说明”获取开源许可。',justify='left').pack(anchor='w',pady=15)
         ttk.Button(panel,text='打开 GitHub 项目仓库',command=lambda:webbrowser.open(REPO_URL)).pack(anchor='w')
         ttk.Label(panel,text=REPO_URL).pack(anchor='w',pady=8)
-    ttk.Button(frame,text='关于与感谢 / GitHub',command=about).grid(row=8,column=0,columnspan=3,sticky='w',pady=10)
+    def export():
+        dest = filedialog.askdirectory(title='选择存放模板和说明的文件夹')
+        if not dest: return
+        try:
+            result=export_materials(dest)
+            messagebox.showinfo('导出完成',f'模板、使用说明和许可文件已保存到：\n{result}')
+        except Exception as e:
+            logging.exception('导出资料失败'); messagebox.showerror('导出失败',str(e))
+    buttons=ttk.Frame(frame); buttons.grid(row=8,column=0,columnspan=3,sticky='w',pady=10)
+    ttk.Button(buttons,text='导出模板和使用说明',command=export).pack(side='left',padx=(0,10))
+    ttk.Button(buttons,text='免责声明',command=lambda:messagebox.showinfo('免责声明',(ASSETS/'免责声明.txt').read_text(encoding='utf-8'))).pack(side='left',padx=(0,10))
+    ttk.Button(buttons,text='关于与感谢 / GitHub',command=about).pack(side='left')
+    def welcome():
+        if (ROOT/'已阅读首次说明').exists(): return
+        win=tk.Toplevel(root); win.title('欢迎使用排班小程序'); win.geometry('700x580'); win.transient(root); win.grab_set()
+        panel=ttk.Frame(win,padding=16); panel.pack(fill='both',expand=True)
+        ttk.Label(panel,text='首次使用教程与免责声明',font=('Microsoft YaHei',15,'bold')).pack(anchor='w',pady=(0,10))
+        text=ScrolledText(panel,wrap='word',font=('Microsoft YaHei',10),height=22)
+        text.pack(fill='both',expand=True)
+        text.insert('1.0',(ASSETS/'使用说明.txt').read_text(encoding='utf-8')+'\n\n'+(ASSETS/'免责声明.txt').read_text(encoding='utf-8'))
+        text.configure(state='disabled')
+        def start():
+            try: (ROOT/'已阅读首次说明').write_text('已查看首次使用说明\n',encoding='utf-8')
+            except OSError as e:
+                messagebox.showerror('保存失败',str(e),parent=win); return
+            win.destroy()
+        ttk.Button(panel,text='我已阅读，开始使用',command=start).pack(pady=(12,0))
+        win.protocol('WM_DELETE_WINDOW',root.destroy)
+    root.after(100,welcome)
     root.mainloop()
-if __name__=='__main__': main()
+if __name__=='__main__':
+    if len(sys.argv)==3 and sys.argv[1]=='--export-materials':
+        export_materials(sys.argv[2])
+    else:
+        main()

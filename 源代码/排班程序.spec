@@ -1,7 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
+from pathlib import Path
 
-datas = []
+datas = [(str(Path(SPECPATH).parent / '构建临时' / '内置资料'), '内置资料')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('ortools')

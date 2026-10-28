@@ -2,13 +2,13 @@
 
 Windows 离线排班工具。项目发布与维护：wufong（GitHub [@fhhv5](https://github.com/fhhv5)）；开发协助：OpenAI Codex。
 
-双击 `排班程序.exe`，导入 `模板` 中的名单、班次和冲突表，选择是否导出电话、宿舍、签名栏、班级、专业和辅导员，并生成 Excel。名单模板包含这些人员信息列，均可留空。推荐使用带“给AI的提示词”工作表的 xlsx 模板。详细格式、排班规则及使用方法见 [使用说明](使用说明.txt)。示例为虚构数据，正式使用前请替换。
+从 [发布页](https://github.com/fhhv5/dorm-duty-scheduler/releases/latest) 下载单文件 `排班程序.exe`。双击后点击“导出模板和使用说明”，选择位置，填写导出的名单、班次和冲突表，再导入程序并生成 Excel。可选择导出电话、宿舍、签名栏、班级、专业和辅导员；名单模板包含这些人员信息列，均可留空。推荐使用带“给AI的提示词”工作表的 xlsx 模板。详细格式、排班规则及使用方法见 [使用说明](使用说明.txt)，请阅读[免责声明](免责声明.txt)。示例为虚构数据，正式使用前请替换。
 
 导入 Excel 时优先读取名为“数据”的工作表；其他 Excel 则读取当前活动表。CSV 使用 UTF-8 编码。程序尽量缩小各成员排班次数的最大差距，且要求班次人数满足、时间不重叠、避开指定冲突。结果请人工核对。
 
 ## 源代码与构建
 
-Python 3.12，依赖 `openpyxl==3.1.5`、`ortools==9.15.6755`；界面使用 Python 自带 tkinter。Windows 构建使用 PyInstaller 6.22.3，见源代码文件夹内的 spec 文件。模板生成脚本使用 OpenAI 工作区 artifact 工具，运行程序不需要该工具。
+Python 3.12，依赖 `openpyxl==3.1.5`、`ortools==9.15.6755`；界面使用 Python 自带 tkinter。Windows 构建使用 PyInstaller 6.22.3。在项目根目录依次运行 `python 源代码/准备内置资料.py` 和 `python -m PyInstaller --noconfirm 源代码/排班程序.spec --distpath . --workpath 构建临时`。准备资料时会打包当前模板，发布前务必确认其中没有个人数据。模板生成脚本使用 OpenAI 工作区 artifact 工具，运行程序不需要该工具。
 
 ## 致谢与许可
 
