@@ -1,4 +1,4 @@
-# 宿管会智能排班
+# 排班小程序
 
 Windows 离线排班工具。项目发布与维护：wufong（GitHub [@fhhv5](https://github.com/fhhv5)）；开发协助：OpenAI Codex。
 

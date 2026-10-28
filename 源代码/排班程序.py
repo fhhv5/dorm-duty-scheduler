@@ -107,9 +107,9 @@ def schedule(peoplefile, shiftsfile, conflictsfile, out, include_phone=True, inc
     return solver.StatusName(status)
 
 def main():
-    root=tk.Tk(); root.title('宿管会智能排班'); root.geometry('760x490')
+    root=tk.Tk(); root.title('排班小程序'); root.geometry('760x490')
     frame=ttk.Frame(root,padding=22); frame.pack(fill='both',expand=True)
-    ttk.Label(frame,text='宿管会智能排班',font=('Microsoft YaHei',18,'bold')).grid(row=0,column=0,columnspan=3,sticky='w',pady=(0,12))
+    ttk.Label(frame,text='排班小程序',font=('Microsoft YaHei',18,'bold')).grid(row=0,column=0,columnspan=3,sticky='w',pady=(0,12))
     ttk.Label(frame,text='按模板填写名单、班次和冲突；班次编号必须一致。',font=('Microsoft YaHei',10)).grid(row=1,column=0,columnspan=3,sticky='w',pady=(0,15))
     vals=[tk.StringVar() for _ in range(3)]
     for i,label in enumerate(['排班名单','班次设置','时间冲突']):
@@ -136,7 +136,7 @@ def main():
     def about():
         win=tk.Toplevel(root); win.title('关于与感谢'); win.geometry('600x330')
         panel=ttk.Frame(win,padding=20); panel.pack(fill='both',expand=True)
-        ttk.Label(panel,text='宿管会智能排班',font=('Microsoft YaHei',16,'bold')).pack(anchor='w')
+        ttk.Label(panel,text='排班小程序',font=('Microsoft YaHei',16,'bold')).pack(anchor='w')
         ttk.Label(panel,text='项目发布与维护：wufong（GitHub @fhhv5）\n开发协助：OpenAI Codex\n\n感谢 Google OR-Tools、openpyxl、Python 和 PyInstaller 的开发者，\n以及 GitHub 排班项目作者提供的参考思路。\n开源许可与第三方声明请查看项目文件夹。',justify='left').pack(anchor='w',pady=15)
         ttk.Button(panel,text='打开 GitHub 项目仓库',command=lambda:webbrowser.open(REPO_URL)).pack(anchor='w')
         ttk.Label(panel,text=REPO_URL).pack(anchor='w',pady=8)
