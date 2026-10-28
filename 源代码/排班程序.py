@@ -60,7 +60,7 @@ def export_materials(parent):
     try:
         for name in ('模板', '第三方许可'):
             shutil.copytree(ASSETS / name, target / name)
-        for name in ('使用说明.txt', '免责声明.txt', 'LICENSE'):
+        for name in ('使用说明.txt', '用户协议.txt', 'LICENSE'):
             shutil.copy2(ASSETS / name, target / name)
     except Exception:
         shutil.rmtree(target, ignore_errors=True)
@@ -177,16 +177,16 @@ def main():
             logging.exception('导出资料失败'); messagebox.showerror('导出失败',str(e))
     buttons=ttk.Frame(frame); buttons.grid(row=8,column=0,columnspan=3,sticky='w',pady=10)
     ttk.Button(buttons,text='导出模板和使用说明',command=export).pack(side='left',padx=(0,10))
-    ttk.Button(buttons,text='免责声明',command=lambda:messagebox.showinfo('免责声明',(ASSETS/'免责声明.txt').read_text(encoding='utf-8'))).pack(side='left',padx=(0,10))
+    ttk.Button(buttons,text='用户协议',command=lambda:messagebox.showinfo('用户协议',(ASSETS/'用户协议.txt').read_text(encoding='utf-8'))).pack(side='left',padx=(0,10))
     ttk.Button(buttons,text='关于与感谢 / GitHub',command=about).pack(side='left')
     def welcome():
         if (ROOT/'已阅读首次说明').exists(): return
         win=tk.Toplevel(root); win.title('欢迎使用排班小程序'); win.geometry('700x580'); win.transient(root); win.grab_set()
         panel=ttk.Frame(win,padding=16); panel.pack(fill='both',expand=True)
-        ttk.Label(panel,text='首次使用教程与免责声明',font=('Microsoft YaHei',15,'bold')).pack(anchor='w',pady=(0,10))
+        ttk.Label(panel,text='首次使用教程与用户协议',font=('Microsoft YaHei',15,'bold')).pack(anchor='w',pady=(0,10))
         text=ScrolledText(panel,wrap='word',font=('Microsoft YaHei',10),height=22)
         text.pack(fill='both',expand=True)
-        text.insert('1.0',(ASSETS/'使用说明.txt').read_text(encoding='utf-8')+'\n\n'+(ASSETS/'免责声明.txt').read_text(encoding='utf-8'))
+        text.insert('1.0',(ASSETS/'使用说明.txt').read_text(encoding='utf-8')+'\n\n'+(ASSETS/'用户协议.txt').read_text(encoding='utf-8'))
         text.configure(state='disabled')
         def start():
             try: (ROOT/'已阅读首次说明').write_text('已查看首次使用说明\n',encoding='utf-8')
